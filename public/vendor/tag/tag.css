@@ -1,0 +1,71 @@
+.tag-input {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.tag-input .tag-input-container
+{
+    border: 1px solid #3f3f3f;
+    border-radius: 5px;
+    padding: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    gap: 5px;
+}
+
+.tag-input .tag-input-results
+{
+    display: none;
+    flex-direction: column;
+    background-color: #121212;
+    min-height: 64px;
+    max-height: 145px;
+    overflow-y: auto;;
+    position: absolute;
+    width: 100%;
+    z-index: 1000;
+    top: 100%;
+    left: 0;
+    border: 1px solid #333;
+    border-radius: 5px;
+    margin-top: 5px;
+}
+
+.tag-input .tag-input-results .tag-input-result
+{
+    padding: 8px 16px;
+    color: #666;
+    cursor: pointer;
+
+}
+
+.tag-input .tag-input-results.active
+{
+    display: flex;
+}
+
+.tag-input .tag-input-item {
+    background-color: #7656eb;
+    color: white;
+    border-radius: 3px;
+    padding: 3px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+
+
+.tag-input input {
+    border: none;
+    outline: none;
+    background-color: transparent;
+    color: white;
+    font-size: 16px;
+    padding: 3px;
+    margin: 0;
+    width: 100%;
+    flex: 1;
+}

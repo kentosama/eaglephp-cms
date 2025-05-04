@@ -1,0 +1,28 @@
+.autocomplete .autocomplete-container {
+    border-radius: 5px;
+    border: 1px solid #333;
+    margin-top: 5px;
+    display: none;
+    z-index: 1000;
+    overflow: hidden;
+    position: absolute;
+    width: 100%;
+    
+}
+
+.autocomplete .autocomplete-container.is-active
+{
+    display: block;
+}
+
+.autocomplete .autocomplete-container .autocomplete-content {
+    display: flex;
+    flex-direction: column;
+    background-color: #121212;
+    min-height: 145px;
+} 
+
+.autocomplete .autocomplete-container .autocomplete-content .autocomplete-item {
+    padding: 8px 16px;
+    color: #666;
+}

@@ -1,0 +1,21 @@
+# Répertoires temporaires et de logs
+/tmp/
+/logs/
+/media/
+/users/
+
+# Fichiers de dépendances
+/vendor/
+composer.lock
+
+# Éditeurs
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# OS et IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

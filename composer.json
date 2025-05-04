@@ -1,0 +1,12 @@
+{
+  "autoload": {
+    "psr-4": {
+      "Eagle\\": "eagle/",
+      "App\\": "app/"
+    }
+  },
+  "require": {
+    "doctrine/inflector": "^2.0",
+    "erusev/parsedown": "^1.7"
+  }
+}
