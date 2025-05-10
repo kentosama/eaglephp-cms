@@ -26,9 +26,50 @@ class ArticlesController extends AppController {
         $this->set('articles', $articles);
     }
 
+    public function add(): void
+    {
+        $article = $this->Articles->createEntity();
+
+        if($this->request->is('POST')) {
+            $article = $this->Articles->patchEntity($article, $this->request->getData());
+            if($this->Articles->save($article)) {
+                $this->redirect(['action' => 'index']);
+            }
+        }
+
+        $types = $this->Articles->Types->findList();
+        $systems = $this->Articles->Systems->findList();
+        $authors = $this->Articles->Authors->findList();
+
+        $this->set('article', $article);
+        $this->set('types', $types);
+        $this->set('systems', $systems);
+        $this->set('authors', $authors);
+    }
+
     public function edit(int $id): void
     {
         $article = $this->Articles->findById($id)->contain(['Images', 'Types', 'Authors', 'Systems', 'Tags']);
+
+        if($this->request->is('POST')) {
+
+            $data = $this->request->getData();
+
+            if(isset($data['tags'])) {
+                $tags = $data['tags'];
+                $data['tags_ids'] = [];
+                unset($data['tags']);
+                if(!empty($tags)) {
+                    $tags = explode(',', $tags);
+                    $data['tags_ids'] = $tags;
+                }
+            }
+            $article = $article->read();
+            $article = $this->Articles->patchEntity($article, $data);
+            if($this->Articles->save($article)) {
+                $this->redirect(['action' => 'index']);
+            }
+        }
 
         $types = $this->Articles->Types->findList();
         $systems = $this->Articles->Systems->findList();

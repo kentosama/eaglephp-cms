@@ -22,3 +22,8 @@ Router::scope('/admin', function () {
 }, true);
 
 
+Router::scope('/api', function () {
+    return [
+        ['path' => '/', 'url' => ['controller' => 'pages', 'action' => 'home']],
+    ];
+}, true);

@@ -7,12 +7,9 @@
             <label for="tag-input-field" class="label">Tags</label>
             <div class="tag-input">
                 <div class="tag-input-container">
-                    <?php $ids = []; ?>
-                    <?php if($article->has('tags')): ?> 
-                    <?php foreach($article->tags as $tag): $ids[] = $tag->id ?>
+                    <?php $ids = []; foreach($article->tags as $tag): $ids[] = $tag->id ?>
                         <span data-id="<?= $tag->id ?>" class="tag-input-item"><?= $tag->name ?></span>
                     <?php endforeach; ?>
-                    <?php endif ?>
                     <input type="text" id="tag-input-field" role="tag-input" class="tag-input-field" />
                     <input type="hidden" name="tags" id="tags" value="<?= implode(',', $ids) ?>" />
                 </div>

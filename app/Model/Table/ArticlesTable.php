@@ -11,6 +11,8 @@ class ArticlesTable extends Table
     {
         parent::initialize();
 
+        $this->behavior('Sluggable', ['keyField' => 'title']);
+
         $this->belongsTo('Images');
         $this->belongsTo('Types', [
             'className' => 'ArticleTypes',

@@ -122,7 +122,7 @@ imageManager.add('image-featured', {
 });
 
 tag = new TagInput('.tag-input', {
-    'query': '/admin/tags/search',
+    'query': '/api/tags/search',
     'conditions': {},
     'field': 'name',
     'maxResults': 5,

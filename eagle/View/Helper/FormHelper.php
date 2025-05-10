@@ -2,6 +2,7 @@
 
 namespace Eagle\View\Helper;
 
+use DateTime;
 use Eagle\View\Helper;
 use Eagle\ORM\Entity;
 use Eagle\ORM\TableRegistry;
@@ -56,9 +57,7 @@ class FormHelper extends Helper
         }
         
         if ($value === null && !is_null($this->entity)) {
-           
-                $value = $this->entity->get($name);
-            
+            $value = $this->entity->get($name);
         }
         
         return $value ?? $args['value'] ?? null;
@@ -76,7 +75,12 @@ class FormHelper extends Helper
     
             $shortName = str_replace('Entity', '', basename(str_replace('\\', '/', $class)));
             $tableName = Inflector::inflect($shortName);
-    
+
+            if(empty($tableName)) {
+
+            }
+       
+
             $this->table = TableRegistry::get($tableName);
             $this->schema = $this->table->getSchema();
             $this->modelName = $shortName;
@@ -180,6 +184,10 @@ class FormHelper extends Helper
         $defaultClass = $this->template['inputClass'];
         $containerClass = $this->template['inputContainerClass'];
         $value = $this->fieldValue($name);
+
+        if($value instanceof DateTime) {
+            $value = $value->format('d/m/Y h:m:s');
+        }
 
         // Gestion du label
         $label = '';

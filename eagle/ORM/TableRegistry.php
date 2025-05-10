@@ -27,6 +27,7 @@ class TableRegistry
             self::$tables[$alias] = new $className();
             return self::$tables[$alias];
         } else {
+   
             $table = new Table();
             $table->setTable($alias);
 

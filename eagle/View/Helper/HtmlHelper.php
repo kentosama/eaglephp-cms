@@ -126,7 +126,7 @@ class HtmlHelper extends Helper
         $attributes = $this->attributes($attrs);
         $html = "<script{$attributes}></script>";
     
-        if ($options['block']) {
+        if ($options['block'] == true) {
             $this->view->append('script', $html);
             return '';
         }

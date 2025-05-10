@@ -11,6 +11,8 @@ class GamesTable extends Table
     {
         parent::initialize();
 
+        $this->behavior('Sluggable');
+
         $this->belongsTo('Publishers', [
             'className' => 'Companies',
             'foreignKey' => 'publisher_id'

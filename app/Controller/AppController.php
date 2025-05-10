@@ -21,7 +21,8 @@ class AppController extends Controller
         
         if($prefix == 'admin') {
             $this->view->layout = 'admin';
-          
+        } else if($prefix == 'api') {
+            exit();
         }
 
     }

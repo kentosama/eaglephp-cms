@@ -11,6 +11,8 @@ class CompaniesTable extends Table
     {
         parent::initialize();
 
+        $this->behavior('Sluggable');
+
     }
 
 }

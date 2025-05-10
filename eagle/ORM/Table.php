@@ -40,6 +40,8 @@ class Table {
 
         $baseName = basename(str_replace('\\', '/', $tableClass));
         $modelName = str_replace('Table', '', $baseName);
+
+       
         
         $this->database = Database::getInstance();
         $this->setTable(Inflector::tableize($modelName));
@@ -99,7 +101,7 @@ class Table {
 
         
         if(!Database::tableExists($tableName)) {
-            throw new \Exception("Table {$tableName} does not exist.");
+            throw new \Exception("Table: {$tableName} does not exist.");
         }
 
         $this->tableName = $tableName;
@@ -293,11 +295,22 @@ class Table {
 
     public function patchEntity(Entity $entity, array $data): Entity
     {
+
         foreach ($data as $key => $value) {
             $entity->set($key, $value);
         }
 
         return $entity;
+    }
+
+    public function entitiesToArray(array $entities): array
+    {
+        $result = [];
+        foreach($entities as $entity) {
+            $result[] = $entity->toArray();
+        }
+
+        return $result;
     }
 
     public function isManyAssociation($name) {
@@ -366,6 +379,36 @@ class Table {
         return $entities;
     }
 
+    public function delete(Entity $entity): bool
+    {
+    
+        $query = new Query();
+        $value = $entity->get($this->primaryKey);
+        return $query->table($this->tableName)->alias($this->tableAlias)->delete($value);
+    }
+
+    private function saveBelongsToMany(Association $association, Entity $entity, array $data): bool 
+    {
+        if(!isset($data['id']))
+            return false;
+
+        
+        $ids = [$entity->get('id'), $data['id']];
+        
+        $query = new Query();
+        $query->table($association->joinTable);
+        $query->alias($this->alias . '_' . $association->alias);
+
+        $data = [
+            Inflector::singularize($this->tableName) . '_id' => $ids[0],
+            Inflector::singularize($association->table) . '_id' => $ids[1]
+        ];
+
+        $query->into($association->joinTable)->insert(array_keys($data))->values($data);
+        return $query->execute();
+
+    }
+
     public function save(Entity $entity): bool
     {   
         $saved = true;
@@ -375,14 +418,26 @@ class Table {
 
             if(!$saved) return false;
         }
-
-        
         
         $query = new Query();
 
         $data = $entity->toArray();
 
+        $belongsToMany = [];
+
         foreach ($data as $key => $value) {
+            
+            if (substr($key, -4) === '_ids')
+            {
+                $baseKey = substr($key, 0, -4);
+                $name = Inflector::classify($baseKey);
+
+                $belongsToMany[$name] = $value;
+
+                
+                continue;
+            }
+
             if ($this->schema->is($key, 'datetime')) {
                 if ($value instanceof \DateTimeInterface) {
                     $data[$key] = $value->format('Y-m-d H:i:s');
@@ -433,8 +488,60 @@ class Table {
 
         $saved = $query->execute();
 
-        foreach($this->behaviors as $behavior) {
-            $behavior->afterSave($entity);
+        if(!isset($data[$this->primaryKey])) {
+            $data[$this->primaryKey] = $query->lastInsertId();
+        }
+
+
+        if($saved) {
+            foreach($belongsToMany as $name => $value) {
+                if(isset($this->associations[$name])) {
+                        $association = $this->associations[$name];
+                    
+                        if($association->type == 'belongsToMany')
+                        {
+
+                            $foreignKey = $association->foreignKey;
+                            $query = new Query();
+
+                            $relations = $query->table($association->joinTable)->alias($association->alias)->readMode('all')->where($foreignKey, $data[$this->primaryKey])->read();
+
+                
+
+                            $ids = [];
+                            foreach ($relations as $relation) {
+                                $ids[] = $relation[$association->associationForeignKey];
+                            }
+
+                            foreach($value as $id)
+                            {
+                                if(!in_array($id, $ids)) {
+                                    $d = ['id' => $id];
+                                    
+                                    $this->saveBelongsToMany($association, $entity, $d);                                     
+                                }
+                            }
+
+                            $toDelete = array_diff($ids, $value);
+
+                            foreach ($relations as $relation) {
+                                if (in_array($relation[$association->associationForeignKey], $toDelete)) {
+                                    $query = new Query();
+                                    $query->table($association->joinTable)
+                                    ->alias($association->alias)
+                                    ->primaryKey($association->primaryKey)
+                                          ->delete($relation['id']);
+                                }
+                            }
+                        }
+                        
+                        unset($data[$key]);
+                    }
+            }
+
+            foreach($this->behaviors as $behavior) {
+                $behavior->afterSave($entity);
+            }
         }
 
         return $saved;

@@ -10,7 +10,7 @@ class ArticleTypesTable extends Table
     protected function initialize()
     {
         parent::initialize();
-
+        $this->behavior('Sluggable');
         $this->belongsTo('Articles');
        
     }

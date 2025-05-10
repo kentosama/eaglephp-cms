@@ -21,6 +21,7 @@ class Query {
     protected $columns = [];
     protected $data = [];
     protected $type;
+    protected $bindings = [];
 
    
     protected $table;
@@ -73,12 +74,13 @@ class Query {
     }
 
 
-    public function readMode(string $type) {
+    public function readMode(string $type): self {
 
         if(!(in_array($type, ['all', 'first', 'list'])))
             throw new ErrorException("Query read mode not avaiable: {$type}");
 
         $this->readMode = $type;
+        return $this;
     }
 
     public function mapWith(callable $callback) {
@@ -355,6 +357,8 @@ class Query {
 
         $sql = "INSERT INTO {$this->table} ({$columnsList}) VALUES ({$placeholders})";
 
+     
+
         $stmt = $this->database->prepare($sql);
         $values = array_values($this->data);
 
@@ -376,6 +380,30 @@ class Query {
     {
         return $this->readAll();
     }
+
+    public function delete(int $id): bool 
+    {
+        $this->sqlParts = []; // Réinitialisation au cas où
+        $this->bindings = []; // Réinitialise les bindings si tu les utilises
+
+        $this->sqlParts[] = "DELETE";
+        $this->sqlParts['FROM'] = "FROM {$this->tableName} AS {$this->tableAlias}";
+
+        // Ajoute une condition de suppression par ID
+        $this->conditions[] = "{$this->tableAlias}.{$this->primaryKey} = ?";
+        $this->bindings[] = $id;
+
+        // Génère les conditions WHERE
+        $this->fetchConditions();
+
+        $sql = implode(' ', $this->sqlParts);
+        $sql = preg_replace('/\s+/', ' ', $sql);
+        $sql = trim($sql);
+
+        $stmt = $this->database->prepare($sql);
+        return $stmt->execute($this->bindings);
+    }
+
 
     public function readOne() {
         
@@ -461,7 +489,7 @@ class Query {
         $sql = preg_replace('/\s+/', ' ', $sql);
         $sql = trim($sql);
 
-     
+   
 
         $stmt = $this->database->query($sql);
         $stmt->execute($this->params);
@@ -674,7 +702,10 @@ class Query {
     }
     
 
-
+    public function lastInsertId(): string|false
+    {
+        return $this->database->lastInsertId();
+    }
 
 
 

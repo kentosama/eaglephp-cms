@@ -29,11 +29,8 @@
                 <h1 class="title"><?= $this->fetch('title') ?></h1>
                 <h2 class="subtitle"><?= $this->fetch('description') ?></h2>
 
-                <?= $this->content() ?>
+                <?php $this->content() ?>
             </div>
-
-
-
         </main>
     </div>
 

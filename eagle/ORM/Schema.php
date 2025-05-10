@@ -60,7 +60,7 @@ class Schema {
 
         $columns = array_keys($data['schema']);
 
-        $targets = ['name', 'title', 'content', 'value', 'description'];
+        $targets = ['name', 'title', 'username', 'content', 'value', 'description'];
         $columns = array_keys($data['schema']);
 
         if ($match = array_values(array_intersect($targets, $columns))) {
