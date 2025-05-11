@@ -23,7 +23,10 @@ class Query {
     protected $type;
     protected $bindings = [];
 
-   
+    protected $results = [];
+
+    protected $subQueries = [];
+
     protected $table;
     protected $tableName;
     protected $tableAlias;
@@ -189,6 +192,22 @@ class Query {
         return $this;
     }
 
+    public function whereIn(string $field, array $values): self
+    {
+        if (empty($values)) {
+            $this->conditions[] = '1 = 0'; // évite erreur SQL
+            return $this;
+        }
+
+        $placeholders = array_fill(0, count($values), '?');
+        $this->conditions[] = "{$field} IN (" . implode(',', $placeholders) . ")";
+        $this->bindings = array_merge($this->bindings, $values);
+
+        return $this;
+    }
+
+
+
     public function or(string $field, string|int $value): self
     {
         $this->conditions['OR'][] = "{$field} = {$value}";
@@ -246,7 +265,7 @@ class Query {
 
             $association = $this->associations[$relationAlias] ?? null;
 
-            if ($association && $association->type === 'belongsTo') {
+            if ($association && $association->is('belongsTo')) {
                 // Ajoute la jointure si elle n’existe pas déjà
                 if (!isset($this->joins[$association->alias])) {
                     $this->join(
@@ -432,8 +451,8 @@ class Query {
         $sql = preg_replace('/\s+/', ' ', $sql);
         $sql = trim($sql);
    
-        $stmt = $this->database->query($sql);
-        $stmt->execute($this->params);
+        $stmt = $this->database->prepare($sql);
+        $stmt->execute($this->bindings);
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         if(!$result)
@@ -442,16 +461,142 @@ class Query {
        
 
         $prefix = $this->tableAlias . '__';
-        $result = $this->nested($prefix, $result);
+        $this->results[0] = $this->nested($prefix, $result);
+
+        $this->fetchContain();
 
         if (is_callable($this->mapCallback)) {
-            $result = ($this->mapCallback)($result);
+            $this->results[0] = ($this->mapCallback)($this->results[0]);
         }
 
-        return $result;
-            
-        
+        return $this->results[0];  
     }
+
+    public function subQuery(): self 
+    {
+        return $this;
+    }
+
+    private function indexedBy(string $key, array $array): array
+    {
+        $indexed = [];
+
+        foreach ($array as $entity) {
+            $indexed[$entity->get($key)] = $entity;
+        }
+
+        return $indexed;
+    }
+
+    private function fetchContain(): void
+    {
+        $associationIds = [];
+
+        foreach ($this->contain as $key => $name) {
+
+            $callback = null;
+            $associationName = null;
+
+            if(is_string($name)) {
+                $associationName = $name;
+            } else if(is_callable($name)) {
+                $callback = $name;
+                $associationName = $key;
+            }
+
+            $association = $this->table->getAssociation($associationName);
+
+            if (!$association) {
+                throw new \ErrorException("{$this->tableAlias} is not associated with {$associationName}");
+            }
+
+
+            
+            
+            // belongsTo
+            if ($association->associationType === 'belongsTo') {
+
+                $ids = array_unique(array_map(fn($e) => $e[$association->foreignKey] ?? null, $this->results));
+                $associationIds[$associationName] = array_filter($ids);
+
+                $table = TableRegistry::get($association->table);
+                $query = $table->find('all')->whereIn("{$association->className}.{$association->primaryKey}", $associationIds[$associationName]);
+
+                if ($callback) {
+                    $callback($query);
+                }
+
+                $keyName = Inflector::singularize(Inflector::tableize($association->alias));
+                $results = $query->read();
+
+                $indexed = $this->indexedBy($association->primaryKey, $results);
+
+                
+
+                foreach($this->results as $key => $row) {
+                    $id = $row[$association->foreignKey] ?? null;
+                    $this->results[$key][$keyName] = $indexed[$id] ?? null;
+                    
+                }
+            } else if($association->associationType == 'belongsToMany') {
+
+                $ids = array_unique(array_map(fn($e) => $e[$this->primaryKey] ?? null, $this->results));
+                $ids = array_filter($ids); 
+
+                
+                $pivotTable = TableRegistry::get($association->pivotTable);
+                $pivotRows = $pivotTable->find('all')
+                ->whereIn($association->foreignKey, $ids)
+                ->read();
+
+                $grouped = [];
+                $targetIds = [];
+                foreach ($pivotRows as $row) {
+                    $sourceId = $row->get($association->foreignKey);
+                    $targetId = $row->get($association->targetForeignKey);
+
+                    $grouped[$sourceId][] = $targetId;
+                    $targetIds[] = $targetId;
+                }
+
+                $targetIds = array_unique($targetIds);
+                $table = TableRegistry::get($association->table);
+                $query = $table->find('all')->whereIn(
+                    "{$association->className}.{$association->primaryKey}", 
+                    $targetIds
+                );
+
+                if ($callback) {
+                    $callback($query);
+                }
+
+                $relatedRows = $query->read();
+                $indexedRelated = $this->indexedBy($association->primaryKey, $relatedRows);
+
+                $keyName = Inflector::tableize($association->alias);
+                foreach ($this->results as $key => $row) {
+                    $sourceId = $row[$association->primaryKey];
+                    $related = [];
+
+                    foreach ($grouped[$sourceId] ?? [] as $relatedId) {
+                        if (isset($indexedRelated[$relatedId])) {
+                            $related[] = $indexedRelated[$relatedId];
+                        }
+                    }
+
+                    $this->results[$key][$keyName] = $related;
+                }
+
+            }
+
+            // hasOne
+            elseif ($association->associationType === 'hasOne') {
+
+            }
+        }
+    }
+
+
 
     public function readAll() {
 
@@ -460,6 +605,9 @@ class Query {
             $this->columns = $this->aliasColumns($this->tableAlias, $schema->getColumns());
         }
 
+        
+
+        
         $this->fetchMatching();
 
         $colums = implode(', ', $this->columns);
@@ -489,23 +637,27 @@ class Query {
         $sql = preg_replace('/\s+/', ' ', $sql);
         $sql = trim($sql);
 
-   
+        $this->params = $this->bindings;
 
-        $stmt = $this->database->query($sql);
+        $stmt = $this->database->prepare($sql);
         $stmt->execute($this->params);
-        $results = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $this->results = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         $prefix = $this->tableAlias . '__';
 
-        foreach($results as $key => $result) {
-            $results[$key] = $this->nested($prefix, $result);
-        }
-        
-        if (is_callable($this->mapCallback)) {
-            $results = ($this->mapCallback)($results);
+        foreach($this->results as $key => $result) {
+            $this->results[$key] = $this->nested($prefix, $result);
         }
 
-        return $results;
+        $this->fetchContain();
+
+        
+        
+        if (is_callable($this->mapCallback)) {
+            $this->results = ($this->mapCallback)($this->results);
+        }
+
+        return $this->results;
 
     }
 
@@ -532,7 +684,7 @@ class Query {
                 
 
                 
-                if($association->type == 'belongsTo') {
+                if($association->is('belongsTo')) {
                     
                     $query = $table->find('first');
                     $query->alias($association->alias);
@@ -546,7 +698,7 @@ class Query {
                     
                     $_key = Inflector::tableize(Inflector::singularize($name));
                     $nested[$_key] = $result;
-                } else if ($association->type == 'hasMany') {
+                } else if ($association->is('hasMany')) {
                     $query = $table->find();
                     $field = $association->alias.'.'.$association->foreignKey;
                     $value = $nested[$this->primaryKey];
@@ -568,7 +720,7 @@ class Query {
                 } 
                 
                 
-                else if($association->type == 'belongsToMany') {
+                else if($association->is('belongsToMany')) {
                     $query = $table->find();
                     $table = $this->tableName . '_' . $association->table;
                     $alias = $this->tableAlias . $association->alias;
@@ -605,7 +757,7 @@ class Query {
             }
         }
 
-        return $this->fetchAssociations($nested);
+        return $nested;
 
     }
 
@@ -623,7 +775,7 @@ class Query {
             $joinQuery = new Query();
 
 
-            if($association->type == 'belongsTo') {
+            if($association->associationType == 'belongsTo') {
                 
                 $alias = $association->alias;
                 $foreignKey = $association->foreignKey;
@@ -642,12 +794,12 @@ class Query {
             
 
                 $this->join($association->table, $alias, "{$this->tableAlias}.{$foreignKey} = {$alias}.id", "INNER");
-            } else if($association->type == 'belongsToMany') {
+            } else if($association->associationType == 'belongsToMany') {
 
                 $alias = $this->tableAlias.$association->alias;
                 $foreignKey = $association->foreignKey;
-                $associationForeignKey = $association->associationForeignKey;
-                $joinTable = $association->joinTable;
+                $associationForeignKey = $association->targetForeignKey;
+                $joinTable = $association->pivotTable;
 
                 $joinQuery->table($association->table);
                 $joinQuery->alias($alias);

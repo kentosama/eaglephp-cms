@@ -8,4 +8,5 @@ define('TMP_DIR', ROOT . DS . 'tmp');
 define('TEMPLATE_DIR', ROOT . DS . 'templates');
 define('CSS_DIR', DS . 'css');
 define('IMG_DIR', DS . 'img');
+define('MEDIA_DIR', DS . 'media');
 define('SCRIPT_DIR', DS . 'js');

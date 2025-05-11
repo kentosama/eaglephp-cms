@@ -5,12 +5,12 @@ use Eagle\ORM\Entity;
 
 class UserEntity extends Entity {
     
-    protected $_visible = [
+    protected array $_visible = [
         'username' => true,
         'motto' => true,
     ];
 
-    protected $_virtual = [
+    protected array $_virtual = [
         'avatar' => true
     ];
 

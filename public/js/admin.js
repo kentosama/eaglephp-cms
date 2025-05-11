@@ -25,7 +25,6 @@ imageManager.add('image-insert', {
     'multiple': true,
     'callbacks': {
         'afterSelect': function (images) {
-            console.log(images);
             let cm = editor.codemirror;
             let doc = cm.getDoc();
             let cursor = cm.getCursor();

@@ -19,8 +19,6 @@ class ArticlesController extends AppController {
         $query = $this->Articles->find('all')
         ->contain(['Images', 'Tags', 'Authors', 'Types', 'Systems',]);
 
-       
-
         $articles = $this->Paginator->paginate($query);
 
         $this->set('articles', $articles);

@@ -19,31 +19,12 @@
                 <div class="tag-input-results"></div>
             </div>
         </div>
-        <div class="field">
-            <label class="label">Image featured</label>
-            <div class="control">
-                <div class="input-image input is-flex is-align-items-center is-bordered" id="image-container">
-                    <div class="image">
-                        <img id="image-preview" class="preview is-hidden" src="" alt="Aperçu de l'image">
-                    </div>
-                    <!-- Nom du fichier -->
-                    <input id="image-file-name" class="input is-static" type="text" placeholder="Sélectionner une image" readonly>
-
-                    <!-- Vignette de l'image -->
-
-
-                    <!-- Bouton pour ouvrir le sélecteur d'image -->
-                    <button class="button is-primary" id="image-select-btn">Sélectionner</button>
-                </div>
-            </div>
-        </div>
-
     </div>
     <div class="column is-3">
         <div class="card">
             <div class="card-image">
                 <figure class="image is-4by3">
-                    <?= $this->html->image($article->image->thumb, ['id' => 'featured-image', 'alt' => 'Aperçu de l\'image']) ?>
+                    <?= $this->html->image(DS.$article->image->thumb, ['id' => 'featured-image-preview', 'alt' => 'Aperçu de l\'image']) ?>
 
                 </figure>
             </div>

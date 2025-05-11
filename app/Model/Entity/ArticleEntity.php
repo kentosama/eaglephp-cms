@@ -5,7 +5,7 @@ use Eagle\ORM\Entity;
 
 class ArticleEntity extends Entity {
 
-    protected $_visible = [
+    protected array $_visible = [
         'title' => true,
         'image' => true,
     ];

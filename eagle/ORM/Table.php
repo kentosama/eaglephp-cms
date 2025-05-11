@@ -74,6 +74,16 @@ class Table {
         return null;    
     }
 
+    public function getAssociation(string $name): ?Association
+    {
+        return $this->associations[$name] ?? null;
+    }
+
+    public function getAssociations(): array
+    {
+        return $this->associations;
+    }
+
     public function behavior(string $name, array $config = []): void 
     {
         $basename = Inflector::classify($name).'Behavior';
@@ -141,6 +151,14 @@ class Table {
     // Associations
 
     protected function belongsTo(string $name, array $options = []) {
+
+        $default = [
+            'joinType' => 'LEFT',
+            'alias' => $name
+        ];
+
+        $options = array_merge($default, $options);
+
         $association = new Association($name, 'belongsTo', $options);
         $this->associations[$name] = $association;
         return $this;
@@ -149,10 +167,17 @@ class Table {
     protected function belongsToMany(string $name, array $options = []) {
 
         $default = [
-            'joinTable' => Inflector::tableize($this->tableName) . '_' . Inflector::tableize($name),
+            'joinType' => 'LEFT',
+            'sourceTable' => $this->tableName,
+            'sourceAlias' => $this->tableAlias,
+            'pivotTable' => Inflector::tableize($this->tableName) . '_' . Inflector::tableize($name),
+            'pivotAlias' => Inflector::singularize($this->tableAlias) . $name,
             'foreignKey' => Inflector::underscore(Inflector::singularize($this->tableName)) . '_id',
+            'className' => $name,
+            'targetForeignKey' => Inflector::underscore(Inflector::singularize($name)) . '_id'
         ];
 
+    
         $options = array_merge($default, $options);
   
         $association = new Association($name, 'belongsToMany', $options);
@@ -328,15 +353,15 @@ class Table {
             if ($value instanceof Entity)
             continue;
 
-            if(is_array($value) && !empty($value)) {
+            if(is_array($value) && isset($value[0])) {
                 if($value[0] instanceof Entity)
                     continue;
             }
 
-            if (!$this->schema->fieldExists($key)) {
+            /*if (!$this->schema->fieldExists($key)) {
                 unset($result[$key]);
                 continue;
-            }
+            }*/
 
             // Time
             if ($this->schema->is($key, 'datetime') || $this->schema->is($key, 'date') ) {
@@ -387,6 +412,16 @@ class Table {
         return $query->table($this->tableName)->alias($this->tableAlias)->delete($value);
     }
 
+    protected function beforeSave(Entity $entity): bool
+    {
+        return true;
+    }
+
+    protected function afterSave(Entity $entity): void
+    {
+
+    }
+
     private function saveBelongsToMany(Association $association, Entity $entity, array $data): bool 
     {
         if(!isset($data['id']))
@@ -396,7 +431,7 @@ class Table {
         $ids = [$entity->get('id'), $data['id']];
         
         $query = new Query();
-        $query->table($association->joinTable);
+        $query->table($association->pivotTable);
         $query->alias($this->alias . '_' . $association->alias);
 
         $data = [
@@ -404,7 +439,7 @@ class Table {
             Inflector::singularize($association->table) . '_id' => $ids[1]
         ];
 
-        $query->into($association->joinTable)->insert(array_keys($data))->values($data);
+        $query->into($association->pivotTable)->insert(array_keys($data))->values($data);
         return $query->execute();
 
     }
@@ -418,6 +453,9 @@ class Table {
 
             if(!$saved) return false;
         }
+
+        if(!$this->beforeSave($entity))
+            return false;
         
         $query = new Query();
 
@@ -498,19 +536,19 @@ class Table {
                 if(isset($this->associations[$name])) {
                         $association = $this->associations[$name];
                     
-                        if($association->type == 'belongsToMany')
+                        if($association->is('belongsToMany'))
                         {
 
                             $foreignKey = $association->foreignKey;
                             $query = new Query();
 
-                            $relations = $query->table($association->joinTable)->alias($association->alias)->readMode('all')->where($foreignKey, $data[$this->primaryKey])->read();
+                            $relations = $query->table($association->pivotTable)->alias($association->alias)->readMode('all')->where($foreignKey, $data[$this->primaryKey])->read();
 
                 
 
                             $ids = [];
                             foreach ($relations as $relation) {
-                                $ids[] = $relation[$association->associationForeignKey];
+                                $ids[] = $relation[$association->targetForeignKey];
                             }
 
                             foreach($value as $id)
@@ -525,9 +563,9 @@ class Table {
                             $toDelete = array_diff($ids, $value);
 
                             foreach ($relations as $relation) {
-                                if (in_array($relation[$association->associationForeignKey], $toDelete)) {
+                                if (in_array($relation[$association->targetForeignKey], $toDelete)) {
                                     $query = new Query();
-                                    $query->table($association->joinTable)
+                                    $query->table($association->pivotTable)
                                     ->alias($association->alias)
                                     ->primaryKey($association->primaryKey)
                                           ->delete($relation['id']);
@@ -542,6 +580,8 @@ class Table {
             foreach($this->behaviors as $behavior) {
                 $behavior->afterSave($entity);
             }
+
+            $this->afterSave($entity);
         }
 
         return $saved;

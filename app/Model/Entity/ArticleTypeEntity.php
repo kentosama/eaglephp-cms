@@ -7,13 +7,13 @@ use Eagle\Utility\Inflector;
 
 class ArticleTypeEntity extends Entity {
 
-    protected $_visible = [
+    protected array $_visible = [
         'name' => true,
         'slug' => true,
     ];
     
-    protected $_virtual = [
-        'plurialize' => true,
+    protected array $_virtual = [
+        'plurialize'
     ];
 
     public function getPlurialize(): string

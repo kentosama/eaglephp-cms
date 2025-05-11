@@ -28,15 +28,15 @@ class ImageManager {
                 'maxSelect': 5,
                 'types': '*',
                 'query': {
-                    'url': '/admin/images/get',
+                    'url': '/api/images/get',
                     'conditions': {}
                 },
                 'update': {
-                    'url': '/admin/images/update',
+                    'url': '/api/images/update',
                 }
             },
             'upload': {
-                'url': '/admin/images/upload',
+                'url': '/api/images/upload',
                 'maxFiles': 50,
                 'maxSize': 1024,
                 'defaultType': 'image',

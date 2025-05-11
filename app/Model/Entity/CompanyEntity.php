@@ -5,7 +5,7 @@ use Eagle\ORM\Entity;
 
 class CompanyEntity extends Entity {
     
-    protected $_visible = [
+    protected array $_visible = [
         'id' => true,
         'name' => true,
         'slug' => true,

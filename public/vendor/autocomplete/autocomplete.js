@@ -3,7 +3,7 @@ class Autocomplete {
         this.config = Object.assign({
             container: '.autocomplete',
             id: 'dropdown-menu',
-            query: '/admin/companies/search',
+            query: '/api/companies/search',
             conditions: {},
             field: 'name',
             maxResults: 5,
